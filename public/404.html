@@ -1,23 +1,14 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <title>KairosMix</title>
-    <script type="text/javascript">
-        // GitHub Pages SPA redirect
-        var pathSegments = window.location.pathname.split('/').filter(function(segment) {
-            return segment !== '';
-        });
-        
-        var newPath = '/' + (pathSegments.length > 1 ? pathSegments.slice(1).join('/') : '');
-        var newUrl = window.location.protocol + '//' + window.location.hostname + 
-                    (window.location.port ? ':' + window.location.port : '') + 
-                    '/KairosMix/' + newPath + window.location.search + window.location.hash;
-        
-        window.location.replace(newUrl);
-    </script>
-</head>
-<body>
-    <p>Redirecting...</p>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-LN+7fdVzj6u52u30Kp6M/trliBMCMKTyK833zpbD+pXdCLuTusPj697FH4R/5mcr" crossorigin="anonymous">
+    <title>KairosMix - Sistema de Gestión de Frutos Secos</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
