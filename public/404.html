@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>KairosMix</title>
+    <script type="text/javascript">
+        // GitHub Pages SPA redirect
+        var pathSegments = window.location.pathname.split('/').filter(function(segment) {
+            return segment !== '';
+        });
+        
+        var newPath = '/' + (pathSegments.length > 1 ? pathSegments.slice(1).join('/') : '');
+        var newUrl = window.location.protocol + '//' + window.location.hostname + 
+                    (window.location.port ? ':' + window.location.port : '') + 
+                    '/KairosMix/' + newPath + window.location.search + window.location.hash;
+        
+        window.location.replace(newUrl);
+    </script>
+</head>
+<body>
+    <p>Redirecting...</p>
+</body>
+</html>

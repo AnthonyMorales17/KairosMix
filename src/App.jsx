@@ -14,8 +14,11 @@ function App() {
     initializeSampleData();
   }, []);
 
+  // Detectar si estamos en GitHub Pages o desarrollo local
+  const basename = import.meta.env.DEV ? '/' : '/KairosMix/';
+
   return (
-    <Router>
+    <Router basename={basename}>
       <Layout>
         <Routes>
           <Route path="/" element={<Navigate to="/productos" replace />} />
