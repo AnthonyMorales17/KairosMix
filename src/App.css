@@ -62,3 +62,33 @@
 .shadow-sm { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
 .shadow { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
 .shadow-lg { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); }
+
+/* Custom button styles for cancel and close actions */
+.btn-cancel,
+.btn-close-custom,
+button[type="button"]:contains("Cancelar"),
+button:contains("Cerrar"),
+.btn-secondary:contains("Cancelar"),
+.btn-outline-secondary:contains("Cancelar") {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: white !important;
+}
+
+.btn-cancel:hover,
+.btn-close-custom:hover {
+  background-color: #c82333 !important;
+  border-color: #bd2130 !important;
+  color: white !important;
+}
+
+/* SweetAlert2 custom button styles */
+.swal2-cancel {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+}
+
+.swal2-cancel:hover {
+  background-color: #c82333 !important;
+  border-color: #bd2130 !important;
+}

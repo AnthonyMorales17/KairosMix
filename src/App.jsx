@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
 import ProductsPage from './pages/ProductsPage';
 import ClientsPage from './pages/ClientsPage';
 import OrdersPage from './pages/OrdersPage';
 import CustomMixPage from './pages/CustomMixPage';
+import { initializeSampleData } from './data/seedData';
 import './App.css';
 
 function App() {
+  useEffect(() => {
+    // Inicializar datos de ejemplo al cargar la aplicación
+    initializeSampleData();
+  }, []);
+
   return (
     <Router>
       <Layout>

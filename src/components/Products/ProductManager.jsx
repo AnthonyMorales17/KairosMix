@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
+import Swal from 'sweetalert2';
 import ProductForm from './ProductForm';
 import './ProductManager.css';
 
@@ -8,85 +9,215 @@ const [products, setProducts] = useState([]);
 const [showForm, setShowForm] = useState(false);
 const [editingProduct, setEditingProduct] = useState(null);
 const [searchTerm, setSearchTerm] = useState('');
-const [filterCategory, setFilterCategory] = useState('all');
 
   // Datos de ejemplo para productos de frutos secos
 useEffect(() => {
     const sampleProducts = [
     {
         id: 1,
+        code: 'A01',
         name: 'Almendras Premium',
-        category: 'Almendras',
-        price: 15.99,
-        stock: 50,
-        unit: 'lb',
-        description: 'Almendras de California, extra grandes y frescas',
+        countryOfOrigin: 'Estados Unidos',
+        pricePerPound: 15.99,
+        wholesalePrice: 14.50,
+        retailPrice: 17.99,
+        initialStock: 50,
         image: null,
-        supplier: 'Distribuidora California',
-        expiryDate: '2024-12-31'
+        imagePreview: ''
     },
     {
         id: 2,
+        code: 'N01',
         name: 'Nueces de Castilla',
-        category: 'Nueces',
-        price: 22.50,
-        stock: 30,
-        unit: 'lb',
-        description: 'Nueces frescas de temporada, ideales para repostería',
+        countryOfOrigin: 'Chile',
+        pricePerPound: 22.50,
+        wholesalePrice: 20.00,
+        retailPrice: 25.99,
+        initialStock: 30,
         image: null,
-        supplier: 'Frutos del Valle',
-        expiryDate: '2024-11-15'
+        imagePreview: ''
     },
     {
         id: 3,
+        code: 'P01',
         name: 'Pasas Sultan',
-        category: 'Frutas Deshidratadas',
-        price: 8.75,
-        stock: 75,
-        unit: 'lb',
-        description: 'Pasas sin semilla, naturalmente dulces',
+        countryOfOrigin: 'Turquía',
+        pricePerPound: 8.75,
+        wholesalePrice: 7.50,
+        retailPrice: 10.99,
+        initialStock: 75,
         image: null,
-        supplier: 'Frutas Secas S.A.',
-        expiryDate: '2025-06-30'
+        imagePreview: ''
     },
     {
         id: 4,
+        code: 'P02',
         name: 'Pistachos Tostados',
-        category: 'Pistachos',
-        price: 35.00,
-        stock: 20,
-        unit: 'lb',
-        description: 'Pistachos premium tostados con sal marina',
+        countryOfOrigin: 'Irán',
+        pricePerPound: 35.00,
+        wholesalePrice: 32.00,
+        retailPrice: 39.99,
+        initialStock: 20,
         image: null,
-        supplier: 'Importadora Premium',
-        expiryDate: '2024-10-20'
+        imagePreview: ''
     },
     {
         id: 5,
+        code: 'A02',
         name: 'Avellanas Enteras',
-        category: 'Avellanas',
-        price: 18.25,
-        stock: 40,
-        unit: 'lb',
-        description: 'Avellanas enteras, perfectas para snacks',
+        countryOfOrigin: 'Italia',
+        pricePerPound: 18.25,
+        wholesalePrice: 16.50,
+        retailPrice: 21.99,
+        initialStock: 40,
         image: null,
-        supplier: 'Frutos del Norte',
-        expiryDate: '2025-01-15'
+        imagePreview: ''
     }
     ];
     setProducts(sampleProducts);
     }, []);
 
-    const categories = ['all', 'Almendras', 'Nueces', 'Frutas Deshidratadas', 'Pistachos', 'Avellanas'];
+    // New advanced search system
+    const [searchResults, setSearchResults] = useState([]);
+    const [searchPerformed, setSearchPerformed] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [searchError, setSearchError] = useState('');
 
-    const filteredProducts = products.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            product.category.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesCategory = filterCategory === 'all' || product.category === filterCategory;
-        return matchesSearch && matchesCategory;
-    });
+    const performSearch = async (searchQuery) => {
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            setSearchPerformed(false);
+            setSelectedProduct(null);
+            setSearchError('');
+            return;
+        }
 
-    const handleAddProduct = (productData) => {
+        try {
+            setSearchError('');
+            const query = searchQuery.trim();
+
+            // 4.1: Exact code search
+            const exactCodeMatch = products.find(product => 
+                product.code.toLowerCase() === query.toLowerCase()
+            );
+
+            if (exactCodeMatch) {
+                setSelectedProduct(exactCodeMatch);
+                setSearchResults([]);
+                setSearchPerformed(true);
+                
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Producto encontrado',
+                    html: `
+                        <div style="text-align: left;">
+                            <strong>Código:</strong> ${exactCodeMatch.code}<br>
+                            <strong>Nombre:</strong> ${exactCodeMatch.name}<br>
+                            <strong>País:</strong> ${exactCodeMatch.countryOfOrigin}<br>
+                            <strong>Precio base:</strong> $${exactCodeMatch.pricePerPound}/lb<br>
+                            <strong>Stock:</strong> ${exactCodeMatch.initialStock} libras
+                        </div>
+                    `,
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            // 4.2 & 4.3: Partial name search
+            const nameMatches = products.filter(product =>
+                product.name.toLowerCase().includes(query.toLowerCase())
+            );
+
+            if (nameMatches.length === 0) {
+                // Exception: No matches found
+                setSearchResults([]);
+                setSelectedProduct(null);
+                setSearchPerformed(true);
+                setSearchError('No se encontraron productos');
+                
+                await Swal.fire({
+                    icon: 'warning',
+                    title: 'Sin resultados',
+                    text: `No existe ningún producto que coincida con "${query}"`,
+                    confirmButtonText: 'Intentar de nuevo'
+                });
+                return;
+            }
+
+            if (nameMatches.length === 1) {
+                // 4.3: Single result - show complete info
+                const singleProduct = nameMatches[0];
+                setSelectedProduct(singleProduct);
+                setSearchResults([]);
+                setSearchPerformed(true);
+                
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Producto encontrado',
+                    html: `
+                        <div style="text-align: left;">
+                            <strong>Código:</strong> ${singleProduct.code}<br>
+                            <strong>Nombre:</strong> ${singleProduct.name}<br>
+                            <strong>País:</strong> ${singleProduct.countryOfOrigin}<br>
+                            <strong>Precio base:</strong> $${singleProduct.pricePerPound}/lb<br>
+                            <strong>Mayorista:</strong> $${singleProduct.wholesalePrice}/lb<br>
+                            <strong>Minorista:</strong> $${singleProduct.retailPrice}/lb<br>
+                            <strong>Stock:</strong> ${singleProduct.initialStock} libras
+                        </div>
+                    `,
+                    confirmButtonText: 'Entendido'
+                });
+                return;
+            }
+
+            // 4.2: Multiple results - show list
+            setSearchResults(nameMatches);
+            setSelectedProduct(null);
+            setSearchPerformed(true);
+            
+            const resultsList = nameMatches.map(product => 
+                `• ${product.code} - ${product.name} ($${product.pricePerPound}/lb)`
+            ).join('<br>');
+            
+            await Swal.fire({
+                icon: 'info',
+                title: `${nameMatches.length} productos encontrados`,
+                html: `<div style="text-align: left;">${resultsList}</div>`,
+                confirmButtonText: 'Ver en la lista'
+            });
+
+        } catch (error) {
+            // Exception: System error
+            setSearchError('Error en la búsqueda');
+            await Swal.fire({
+                icon: 'error',
+                title: 'Error del sistema',
+                text: 'No se pudo completar la búsqueda. Por favor, inténtalo de nuevo.',
+                confirmButtonText: 'Intentar de nuevo'
+            });
+        }
+    };
+
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        performSearch(searchTerm);
+    };
+
+    const clearSearch = () => {
+        setSearchTerm('');
+        setSearchResults([]);
+        setSearchPerformed(false);
+        setSelectedProduct(null);
+        setSearchError('');
+    };
+
+    // Display logic for products
+    const displayProducts = searchPerformed ? 
+        (searchResults.length > 0 ? searchResults : 
+         selectedProduct ? [selectedProduct] : []) : 
+        products;
+
+    const handleAddProduct = async (productData) => {
         const newProduct = {
         ...productData,
         id: Date.now()
@@ -95,7 +226,7 @@ useEffect(() => {
         setShowForm(false);
     };    
 
-    const handleEditProduct = (productData) => {
+    const handleEditProduct = async (productData) => {
         setProducts(products.map(p => 
         p.id === editingProduct.id ? { ...productData, id: editingProduct.id } : p
         ));
@@ -103,9 +234,31 @@ useEffect(() => {
         setShowForm(false);
     };
 
-    const handleDeleteProduct = (id) => {
-        if (window.confirm('¿Estás seguro de que deseas eliminar este producto?')) {
-        setProducts(products.filter(p => p.id !== id));
+    const handleDeleteProduct = async (id) => {
+        const product = products.find(p => p.id === id);
+        
+        const result = await Swal.fire({
+            title: '¿Estás seguro?',
+            html: `Vas a eliminar el producto:<br><strong>${product.name}</strong><br><br>Esta acción no se puede deshacer.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true
+        });
+
+        if (result.isConfirmed) {
+            setProducts(products.filter(p => p.id !== id));
+            
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Eliminado!',
+                text: 'El producto ha sido eliminado correctamente.',
+                timer: 1500,
+                showConfirmButton: false
+            });
         }
     };
 
@@ -146,37 +299,62 @@ useEffect(() => {
         </button>
       </div>
 
-      <div className="filters-section">
-        <div className="search-box">
-          <Search className="search-icon" />
-          <input
-            type="text"
-            placeholder="Buscar productos..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="form-control search-input"
-          />
-        </div>
+      <div className="search-section">
+        <form onSubmit={handleSearchSubmit} className="search-form">
+          <div className="search-box">
+            <Search className="search-icon" />
+            <input
+              type="text"
+              placeholder="Buscar por código exacto o nombre del producto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-control search-input"
+            />
+          </div>
+          <div className="search-actions">
+            <button 
+              type="submit" 
+              className="btn btn-primary me-2"
+              disabled={!searchTerm.trim()}
+            >
+              <Search size={18} className="me-1" />
+              Buscar
+            </button>
+            {searchPerformed && (
+              <button 
+                type="button" 
+                className="btn btn-outline-secondary"
+                onClick={clearSearch}
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+        </form>
         
-        <div className="filter-group">
-          <label htmlFor="category-filter" className="form-label">Categoría:</label>
-          <select
-            id="category-filter"
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="form-select"
-          >
-            {categories.map(category => (
-              <option key={category} value={category}>
-                {category === 'all' ? 'Todas las categorías' : category}
-              </option>
-            ))}
-          </select>
-        </div>
+        {searchPerformed && (
+          <div className="search-status">
+            {selectedProduct && (
+              <div className="alert alert-success">
+                <strong>Producto encontrado:</strong> {selectedProduct.name} ({selectedProduct.code})
+              </div>
+            )}
+            {searchResults.length > 0 && (
+              <div className="alert alert-info">
+                <strong>{searchResults.length} productos encontrados</strong> - Se muestran abajo
+              </div>
+            )}
+            {searchError && (
+              <div className="alert alert-warning">
+                <strong>Sin resultados:</strong> {searchError}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="products-grid">
-        {filteredProducts.map(product => (
+        {displayProducts.map(product => (
           <div key={product.id} className="product-card">
             <div className="product-image">
               {product.image ? (
@@ -189,31 +367,33 @@ useEffect(() => {
             </div>
             
             <div className="product-info">
-              <h3 className="product-name">{product.name}</h3>
-              <p className="product-category">{product.category}</p>
-              <p className="product-description">{product.description}</p>
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <h3 className="product-name">{product.name}</h3>
+                <span className="badge bg-secondary">{product.code}</span>
+              </div>
+              <p className="text-muted small mb-3">Origen: {product.countryOfOrigin}</p>
               
               <div className="product-details">
                 <div className="detail-item">
-                  <span className="detail-label">Precio:</span>
-                  <span className="product-price">${product.price}</span>
+                  <span className="detail-label">Precio Base:</span>
+                  <span className="product-price">${product.pricePerPound}/lb</span>
+                </div>
+                
+                <div className="detail-item">
+                  <span className="detail-label">Mayorista:</span>
+                  <span className="text-success">${product.wholesalePrice}/lb</span>
+                </div>
+                
+                <div className="detail-item">
+                  <span className="detail-label">Minorista:</span>
+                  <span className="text-info">${product.retailPrice}/lb</span>
                 </div>
                 
                 <div className="detail-item">
                   <span className="detail-label">Stock:</span>
-                  <span className={`stock-badge ${getStockStatus(product.stock)}`}>
-                    {product.stock} {product.unit}
+                  <span className={`stock-badge ${getStockStatus(product.initialStock)}`}>
+                    {product.initialStock} libras
                   </span>
-                </div>
-                
-                <div className="detail-item">
-                  <span className="detail-label">Proveedor:</span>
-                  <span className="product-supplier">{product.supplier}</span>
-                </div>
-                
-                <div className="detail-item">
-                  <span className="detail-label">Vencimiento:</span>
-                  <span className="expiry-date">{product.expiryDate}</span>
                 </div>
               </div>
             </div>
@@ -240,11 +420,19 @@ useEffect(() => {
         ))}
       </div>
 
-      {filteredProducts.length === 0 && (
+      {displayProducts.length === 0 && !searchPerformed && (
         <div className="empty-state">
           <Package size={64} />
-          <h3>No se encontraron productos</h3>
-          <p>Intenta ajustar los filtros o agrega un nuevo producto</p>
+          <h3>No hay productos registrados</h3>
+          <p>Agrega tu primer producto usando el botón "Nuevo Producto"</p>
+        </div>
+      )}
+
+      {displayProducts.length === 0 && searchPerformed && (
+        <div className="empty-state">
+          <Search size={64} />
+          <h3>Sin resultados de búsqueda</h3>
+          <p>No se encontraron productos que coincidan con tu búsqueda</p>
         </div>
       )}
 
@@ -253,7 +441,7 @@ useEffect(() => {
           product={editingProduct}
           onSave={editingProduct ? handleEditProduct : handleAddProduct}
           onCancel={closeForm}
-          categories={categories.filter(cat => cat !== 'all')}
+          existingProducts={products}
         />
       )}
     </div>
