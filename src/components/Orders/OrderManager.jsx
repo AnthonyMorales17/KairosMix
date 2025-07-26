@@ -21,6 +21,11 @@ const OrderManager = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   const orderStatuses = {
+    'client_pending': {
+      color: 'info',
+      nextStates: ['Pendiente', 'En Proceso', 'Cancelado'],
+      description: 'Pedido enviado por cliente, pendiente de revisión del administrador'
+    },
     'Pendiente': { 
       color: 'warning', 
       nextStates: ['En Proceso', 'Cancelado'],
@@ -519,13 +524,24 @@ const OrderManager = () => {
                       </strong>
                     </td>
                     <td>
-                      <span 
-                        className={`badge bg-${orderStatuses[order.status]?.color || 'secondary'} cursor-pointer`}
-                        onClick={() => handleChangeStatus(order)}
-                        title="Click para cambiar estado"
-                      >
-                        {order.status}
-                      </span>
+                      <div className="d-flex align-items-center gap-2">
+                        <span 
+                          className={`badge bg-${orderStatuses[order.status]?.color || 'secondary'} cursor-pointer`}
+                          onClick={() => handleChangeStatus(order)}
+                          title="Click para cambiar estado"
+                        >
+                          {order.status === 'client_pending' ? 'Pedido de Cliente' : order.status}
+                        </span>
+                        {order.clientRequest && (
+                          <span 
+                            className="badge bg-gradient bg-primary"
+                            title="Pedido enviado por un cliente"
+                            style={{ fontSize: '0.7em' }}
+                          >
+                            👤 Cliente
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <small>{order.products.length} producto(s)</small>

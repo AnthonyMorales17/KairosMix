@@ -357,6 +357,65 @@ const CustomMixDesigner = ({ products = [], onCreateOrder }) => {
                 return;
             }
 
+            // En modo cliente, preguntar qué hacer antes de guardar
+            if (isClientMode) {
+                const result = await Swal.fire({
+                    title: '¿Qué deseas hacer?',
+                    text: 'Selecciona una opción para tu mezcla personalizada',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#17a2b8',
+                    confirmButtonText: 'Guardar y Realizar Pedido',
+                    cancelButtonText: 'Solo Guardar',
+                    showDenyButton: true,
+                    denyButtonText: 'Cancelar',
+                    denyButtonColor: '#6c757d',
+                    reverseButtons: true
+                });
+
+                if (result.isDenied) {
+                    return; // Usuario canceló
+                }
+
+                // Guardar la mezcla primero
+                const newMix = {
+                    id: Date.now(),
+                    name: mixName,
+                    components: selectedComponents,
+                    totalPrice: calculateTotalPrice(),
+                    nutrition: calculateMixNutrition(),
+                    createdAt: new Date().toISOString()
+                };
+
+                const updatedMixes = [...savedMixes, newMix];
+                setSavedMixes(updatedMixes);
+                localStorage.setItem('savedMixes', JSON.stringify(updatedMixes));
+
+                if (result.isConfirmed) {
+                    // Guardar y crear pedido
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Mezcla guardada!',
+                        text: `La mezcla "${mixName}" ha sido guardada correctamente`,
+                        confirmButtonText: 'Continuar',
+                        timer: 1500
+                    });
+                    handleCreateOrderForClient();
+                } else if (result.dismiss === Swal.DismissReason.cancel) {
+                    // Solo guardar
+                    await Swal.fire({
+                        icon: 'success',
+                        title: '¡Mezcla guardada! 😊',
+                        text: `Tu mezcla "${mixName}" ha sido guardada correctamente. ¡Puedes encontrarla en tus mezclas guardadas!`,
+                        confirmButtonText: 'Crear otra mezcla',
+                        timer: 3000
+                    });
+                }
+                return;
+            }
+
+            // Comportamiento normal para administradores
             const newMix = {
                 id: Date.now(),
                 name: mixName,
@@ -378,30 +437,19 @@ const CustomMixDesigner = ({ products = [], onCreateOrder }) => {
             });
 
             // Solo preguntar sobre crear pedido si NO está en modo cliente
-            if (!isClientMode) {
-                const result = await Swal.fire({
-                    title: '¿Crear pedido?',
-                    text: '¿Deseas crear un pedido con esta mezcla?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonColor: '#28a745',
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Sí, crear pedido',
-                    cancelButtonText: 'No, gracias'
-                });
+            const result = await Swal.fire({
+                title: '¿Crear pedido?',
+                text: '¿Deseas crear un pedido con esta mezcla?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, crear pedido',
+                cancelButtonText: 'No, gracias'
+            });
 
-                if (result.isConfirmed) {
-                    handleCreateOrder();
-                }
-            } else {
-                // En modo cliente, mostrar mensaje amigable
-                await Swal.fire({
-                    icon: 'info',
-                    title: '¡Excelente elección!',
-                    text: 'Tu mezcla personalizada ha sido guardada. ¡Esperamos que la disfrutes!',
-                    confirmButtonText: 'Crear otra mezcla',
-                    timer: 3000
-                });
+            if (result.isConfirmed) {
+                handleCreateOrder();
             }
 
         } catch (error) {
@@ -436,6 +484,155 @@ const CustomMixDesigner = ({ products = [], onCreateOrder }) => {
             onCreateOrder(mixData);
             // Limpiar el estado después de crear el pedido exitosamente
             clearMixDesignerSilent();
+        }
+    };
+
+    const handleCreateOrderForClient = async () => {
+        if (selectedComponents.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Mezcla vacía',
+                text: 'Agrega al menos un producto para realizar un pedido',
+                confirmButtonText: 'Entendido'
+            });
+            return;
+        }
+
+        try {
+            // Formulario simplificado para clientes
+            const { value: formData } = await Swal.fire({
+                title: 'Realizar Pedido',
+                html: `
+                    <div style="text-align: left;">
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Tu Cédula/RUC/Pasaporte:</label>
+                            <input id="clientId" class="swal2-input" placeholder="Ej: 1234567890" style="margin: 0;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Comentarios adicionales (opcional):</label>
+                            <textarea id="observations" class="swal2-textarea" placeholder="Alguna observación especial..." style="margin: 0; height: 80px;"></textarea>
+                        </div>
+                        <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #007bff;">
+                            <h5 style="margin: 0 0 10px 0; color: #0056b3;">📦 Resumen de tu Pedido:</h5>
+                            <p style="margin: 5px 0;"><strong>Mezcla:</strong> ${mixName || 'Mezcla Personalizada'}</p>
+                            <p style="margin: 5px 0;"><strong>Total:</strong> $${calculateTotalPrice().toFixed(2)}</p>
+                            <p style="margin: 5px 0;"><strong>Productos:</strong> ${selectedComponents.length}</p>
+                            <p style="margin: 10px 0 5px 0; font-size: 0.9em; color: #666;">
+                                <em>📋 Tu pedido será enviado al administrador para su procesamiento.</em>
+                            </p>
+                        </div>
+                    </div>
+                `,
+                width: '500px',
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Enviar Pedido 📤',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                preConfirm: () => {
+                    const clientId = document.getElementById('clientId').value;
+                    const observations = document.getElementById('observations').value;
+                    
+                    if (!clientId.trim()) {
+                        Swal.showValidationMessage('Tu identificación es requerida');
+                        return false;
+                    }
+                    
+                    return {
+                        clientId: clientId.trim(),
+                        observations: observations.trim()
+                    };
+                }
+            });
+
+            if (formData) {
+                // Verificar si el cliente existe
+                const clients = JSON.parse(localStorage.getItem('clients') || '[]');
+                const client = clients.find(c => c.id === formData.clientId);
+                
+                if (!client) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Cliente no registrado',
+                        text: 'No encontramos tu información. Por favor, contacta al administrador para registrarte primero.',
+                        confirmButtonText: 'Entendido',
+                        footer: '<small>Tip: Solicita al administrador que registre tu información como cliente</small>'
+                    });
+                    return;
+                }
+
+                const mixData = {
+                    name: mixName || `Mezcla personalizada ${Date.now()}`,
+                    components: selectedComponents,
+                    totalPrice: calculateTotalPrice(),
+                    nutrition: calculateMixNutrition()
+                };
+
+                // Crear pedido con estado especial para clientes
+                const newOrder = {
+                    id: Date.now(),
+                    clientId: formData.clientId,
+                    clientName: client.name,
+                    type: 'custom_mix_client',
+                    mixData: mixData,
+                    products: mixData.components.map(component => ({
+                        code: component.productCode,
+                        name: component.productName,
+                        quantity: component.quantity,
+                        unitPrice: component.price / component.quantity,
+                        totalPrice: component.price
+                    })),
+                    totalAmount: mixData.totalPrice,
+                    status: 'client_pending', // Estado especial para pedidos de clientes
+                    observations: formData.observations,
+                    clientRequest: true, // Marca que es un pedido de cliente
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                // Guardar pedido
+                const orders = JSON.parse(localStorage.getItem('orders') || '[]');
+                orders.push(newOrder);
+                localStorage.setItem('orders', JSON.stringify(orders));
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: '¡Pedido enviado exitosamente! 🎉',
+                    html: `
+                        <div style="text-align: left;">
+                            <div style="background: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+                                <p style="margin: 5px 0;"><strong>📋 ID del Pedido:</strong> #${newOrder.id}</p>
+                                <p style="margin: 5px 0;"><strong>👤 Cliente:</strong> ${client.name}</p>
+                                <p style="margin: 5px 0;"><strong>🥜 Mezcla:</strong> ${mixData.name}</p>
+                                <p style="margin: 5px 0;"><strong>💰 Total:</strong> $${mixData.totalPrice.toFixed(2)}</p>
+                                <p style="margin: 10px 0 5px 0; font-weight: bold; color: #155724;">
+                                    Estado: Enviado al administrador
+                                </p>
+                            </div>
+                            <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                                <p style="margin: 0; font-size: 0.9em; color: #856404;">
+                                    <strong>Próximos pasos:</strong> El administrador revisará tu pedido.
+                                </p>
+                            </div>
+                        </div>
+                    `,
+                    confirmButtonText: 'Perfecto, gracias 😊',
+                    width: '600px'
+                });
+
+                // Limpiar el diseñador después de enviar el pedido
+                clearMixDesignerSilent();
+            }
+
+        } catch (error) {
+            console.error('Error creating client order:', error);
+            await Swal.fire({
+                icon: 'error',
+                title: 'Error del sistema',
+                text: 'No se pudo enviar tu pedido. Por favor, inténtalo de nuevo.',
+                confirmButtonText: 'Reintentar'
+            });
         }
     };
 
@@ -754,7 +951,16 @@ const CustomMixDesigner = ({ products = [], onCreateOrder }) => {
                             {isClientMode ? 'Guardar Mi Mezcla' : 'Guardar Mezcla'}
                         </button>
                         
-                        {!isClientMode && (
+                        {isClientMode ? (
+                            <button
+                                onClick={handleCreateOrderForClient}
+                                className="btn btn-primary btn-lg"
+                                title="Enviar pedido al administrador"
+                            >
+                                <ShoppingCart size={20} className="me-2" />
+                                Realizar Pedido 📤
+                            </button>
+                        ) : (
                             <button
                                 onClick={handleCreateOrder}
                                 className="btn btn-primary btn-lg"
