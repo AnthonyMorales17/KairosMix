@@ -12,70 +12,78 @@ const [searchTerm, setSearchTerm] = useState('');
 
   // Datos de ejemplo para productos de frutos secos
 useEffect(() => {
-    const sampleProducts = [
-    {
-        id: 1,
-        code: 'A01',
-        name: 'Almendras Premium',
-        countryOfOrigin: 'Estados Unidos',
-        pricePerPound: 15.99,
-        wholesalePrice: 14.50,
-        retailPrice: 17.99,
-        initialStock: 50,
-        image: null,
-        imagePreview: ''
-    },
-    {
-        id: 2,
-        code: 'N01',
-        name: 'Nueces de Castilla',
-        countryOfOrigin: 'Chile',
-        pricePerPound: 22.50,
-        wholesalePrice: 20.00,
-        retailPrice: 25.99,
-        initialStock: 30,
-        image: null,
-        imagePreview: ''
-    },
-    {
-        id: 3,
-        code: 'P01',
-        name: 'Pasas Sultan',
-        countryOfOrigin: 'Turquía',
-        pricePerPound: 8.75,
-        wholesalePrice: 7.50,
-        retailPrice: 10.99,
-        initialStock: 75,
-        image: null,
-        imagePreview: ''
-    },
-    {
-        id: 4,
-        code: 'P02',
-        name: 'Pistachos Tostados',
-        countryOfOrigin: 'Irán',
-        pricePerPound: 35.00,
-        wholesalePrice: 32.00,
-        retailPrice: 39.99,
-        initialStock: 20,
-        image: null,
-        imagePreview: ''
-    },
-    {
-        id: 5,
-        code: 'A02',
-        name: 'Avellanas Enteras',
-        countryOfOrigin: 'Italia',
-        pricePerPound: 18.25,
-        wholesalePrice: 16.50,
-        retailPrice: 21.99,
-        initialStock: 40,
-        image: null,
-        imagePreview: ''
+    // Cargar productos desde localStorage o usar datos de ejemplo
+    const savedProducts = localStorage.getItem('products');
+    if (savedProducts) {
+        setProducts(JSON.parse(savedProducts));
+    } else {
+        const sampleProducts = [
+        {
+            id: 1,
+            code: 'A01',
+            name: 'Almendras Premium',
+            countryOfOrigin: 'Estados Unidos',
+            pricePerPound: 15.99,
+            wholesalePrice: 14.50,
+            retailPrice: 17.99,
+            initialStock: 50,
+            stock: 50,
+            image: null
+        },
+        {
+            id: 2,
+            code: 'N01',
+            name: 'Nueces de Castilla',
+            countryOfOrigin: 'Chile',
+            pricePerPound: 22.50,
+            wholesalePrice: 20.00,
+            retailPrice: 25.99,
+            initialStock: 30,
+            stock: 30,
+            image: null
+        },
+        {
+            id: 3,
+            code: 'P01',
+            name: 'Pasas Sultan',
+            countryOfOrigin: 'Turquía',
+            pricePerPound: 8.75,
+            wholesalePrice: 7.50,
+            retailPrice: 10.99,
+            initialStock: 75,
+            stock: 75,
+            image: null
+        },
+        {
+            id: 4,
+            code: 'A02',
+            name: 'Avellanas',
+            countryOfOrigin: 'Italia',
+            pricePerPound: 18.25,
+            wholesalePrice: 16.50,
+            retailPrice: 20.99,
+            initialStock: 40,
+            stock: 40,
+            image: null
+        },
+        {
+            id: 5,
+            code: 'P02',
+            name: 'Pistachos Tostados',
+            countryOfOrigin: 'Estados Unidos',
+            pricePerPound: 28.75,
+            wholesalePrice: 26.00,
+            retailPrice: 32.99,
+            initialStock: 25,
+            stock: 25,
+            image: null
+        }
+        ];
+        
+        setProducts(sampleProducts);
+        localStorage.setItem('products', JSON.stringify(sampleProducts));
     }
-    ];
-    setProducts(sampleProducts);
-    }, []);
+}, []);
 
     // New advanced search system
     const [searchResults, setSearchResults] = useState([]);
@@ -220,16 +228,21 @@ useEffect(() => {
     const handleAddProduct = async (productData) => {
         const newProduct = {
         ...productData,
-        id: Date.now()
+        id: Date.now(),
+        stock: productData.initialStock // Agregar stock inicial
         };
-        setProducts([...products, newProduct]);
+        const updatedProducts = [...products, newProduct];
+        setProducts(updatedProducts);
+        localStorage.setItem('products', JSON.stringify(updatedProducts));
         setShowForm(false);
     };    
 
     const handleEditProduct = async (productData) => {
-        setProducts(products.map(p => 
-        p.id === editingProduct.id ? { ...productData, id: editingProduct.id } : p
-        ));
+        const updatedProducts = products.map(p => 
+        p.id === editingProduct.id ? { ...productData, id: editingProduct.id, stock: productData.initialStock } : p
+        );
+        setProducts(updatedProducts);
+        localStorage.setItem('products', JSON.stringify(updatedProducts));
         setEditingProduct(null);
         setShowForm(false);
     };
@@ -250,7 +263,9 @@ useEffect(() => {
         });
 
         if (result.isConfirmed) {
-            setProducts(products.filter(p => p.id !== id));
+            const updatedProducts = products.filter(p => p.id !== id);
+            setProducts(updatedProducts);
+            localStorage.setItem('products', JSON.stringify(updatedProducts));
             
             await Swal.fire({
                 icon: 'success',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, FileSpreadsheet, Filter, Calendar, DollarSign, Package, Users } from 'lucide-react';
 import Swal from 'sweetalert2';
+import * as XLSX from 'xlsx';
 import './OrderReport.css';
 
 const OrderReport = ({ orders, onClose }) => {
@@ -204,11 +205,28 @@ const OrderReport = ({ orders, onClose }) => {
 
     try {
       // Simular generación de reporte
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // En una implementación real, aquí usarías una librería como xlsx o similar
-      const csvContent = generateCSVContent();
-      downloadFile(csvContent, 'reporte-pedidos.csv', 'text/csv');
+      // Crear el workbook Excel
+      const workbook = XLSX.utils.book_new();
+      
+      // Crear los datos del reporte según el formato de la imagen
+      const excelData = generateExcelData();
+      
+      // Crear worksheet
+      const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+      
+      // Aplicar estilos y configuraciones
+      applyExcelStyles(worksheet);
+      
+      // Agregar worksheet al workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte Pedidos');
+      
+      // Generar y descargar archivo
+      const currentDate = new Date().toLocaleDateString('es-EC').replace(/\//g, '-');
+      const filename = `Reporte-Pedidos-KAIROSMIX-${currentDate}.xlsx`;
+      
+      XLSX.writeFile(workbook, filename);
 
       Swal.fire({
         title: '¡Reporte Generado!',
@@ -218,6 +236,7 @@ const OrderReport = ({ orders, onClose }) => {
         showConfirmButton: false
       });
     } catch (error) {
+      console.error('Error generating Excel report:', error);
       Swal.fire({
         title: 'Error',
         text: 'Error al generar el reporte. Intenta nuevamente.',
@@ -228,45 +247,122 @@ const OrderReport = ({ orders, onClose }) => {
     }
   };
 
-  const generateCSVContent = () => {
-    let csv = 'REPORTE DE PEDIDOS - KAIROSMIX\n\n';
+  const generateExcelData = () => {
+    const data = [];
+    const currentDate = new Date().toLocaleDateString('es-EC');
     
-    // Resumen general
-    csv += 'RESUMEN GENERAL\n';
-    csv += `Total de Pedidos,${reportData.totalOrders}\n`;
-    csv += `Ventas Brutas,${reportData.grossSales.toFixed(2)}\n`;
-    csv += `Ventas Netas,${reportData.netSales.toFixed(2)}\n`;
-    csv += `Total Productos Vendidos,${reportData.totalProducts}\n`;
-    csv += `Valor Promedio por Pedido,${reportData.averageOrderValue.toFixed(2)}\n\n`;
-
-    // Detalle de pedidos
-    csv += 'DETALLE DE PEDIDOS\n';
-    csv += 'ID,Fecha,Cliente,Estado,Método Pago,Subtotal,IVA,Total\n';
+    // Encabezado principal
+    data.push(['', '', '', '', 'REPORTE DE PEDIDOS - KAIROSMIX', '', '', '', '']);
+    data.push(['', '', '', '', `Fecha: ${currentDate}`, '', '', '', '']);
+    data.push(['', '', '', '', 'Tienda: El Kairo de Dios', '', '', '', '']);
+    data.push(['', '', '', '', '', '', '', '', '']); // Línea vacía
+    
+    // Resumen General
+    data.push(['', '', '', 'RESUMEN GENERAL', '', '', '', '', '']);
+    data.push(['Total Productos Vendidos', '', '', reportData.totalProducts, '', '', '', '', '']);
+    data.push(['Total de Pedidos', '', '', reportData.totalOrders, '', '', '', '', '']);
+    data.push(['Ventas Brutas', '', '', `$${reportData.grossSales.toFixed(2)}`, '', '', '', '', '']);
+    data.push(['Ventas Netas', '', '', `$${reportData.netSales.toFixed(2)}`, '', '', '', '', '']);
+    data.push(['', '', '', '', '', '', '', '', '']); // Línea vacía
+    
+    // Detalle de Pedidos
+    data.push(['', '', 'DETALLE DE PEDIDOS', '', '', '', '', '', '']);
+    data.push(['ID', 'FECHA', 'CLIENTE', 'ESTADO', 'MÉTODO DE PAGO', 'SUBTOTAL', 'IVA', 'TOTAL', '']);
     
     filteredOrders.forEach(order => {
-      csv += `${order.id},${order.date},"${order.client && order.client.name ? order.client.name : 'Cliente no especificado'}",${order.status},${order.paymentMethod || 'Efectivo'},${(order.subtotal || 0).toFixed(2)},${(order.taxes || 0).toFixed(2)},${order.total.toFixed(2)}\n`;
+      const subtotal = order.subtotal || 0;
+      const iva = (order.total || 0) - subtotal;
+      
+      data.push([
+        order.id,
+        formatDate(order.date || order.createdAt),
+        order.client && order.client.name ? order.client.name : 'Cliente no especificado',
+        order.status,
+        order.paymentMethod || 'Efectivo',
+        `$${subtotal.toFixed(2)}`,
+        `$${iva.toFixed(2)}`,
+        `$${(order.total || 0).toFixed(2)}`,
+        ''
+      ]);
     });
-
-    csv += '\nPRODUCTOS MÁS VENDIDOS\n';
-    csv += 'Código,Producto,Cantidad,Total Ventas\n';
+    
+    data.push(['', '', '', '', '', '', '', '', '']); // Línea vacía
+    
+    // Productos Más Vendidos
+    data.push(['', '', 'PRODUCTOS MÁS VENDIDOS', '', '', '', '', '', '']);
+    data.push(['CÓDIGO', 'PRODUCTO', 'CANTIDAD (Lb)', 'TOTAL VENTAS', '', '', '', '', '']);
     
     reportData.topProducts.forEach(product => {
-      csv += `${product.code},"${product.name}",${product.quantity},${product.total.toFixed(2)}\n`;
+      data.push([
+        product.code,
+        product.name,
+        product.quantity,
+        `$${product.total.toFixed(2)}`,
+        '',
+        '',
+        '',
+        '',
+        ''
+      ]);
     });
-
-    return csv;
+    
+    data.push(['', '', '', '', '', '', '', '', '']); // Línea vacía
+    
+    // Productos Vendidos (Stock)
+    data.push(['', '', 'PRODUCTOS VENDIDOS', '', '', '', '', '', '']);
+    data.push(['CÓDIGO', 'PRODUCTO', 'STOCK (Lb)', '', '', '', '', '', '']);
+    
+    // Obtener productos únicos y sus stocks
+    const productStock = {};
+    filteredOrders.forEach(order => {
+      order.products.forEach(product => {
+        if (productStock[product.code]) {
+          productStock[product.code].stock += product.quantity;
+        } else {
+          productStock[product.code] = {
+            name: product.name,
+            stock: product.quantity
+          };
+        }
+      });
+    });
+    
+    Object.entries(productStock).forEach(([code, info]) => {
+      data.push([
+        code,
+        info.name,
+        info.stock,
+        '',
+        '',
+        '',
+        '',
+        '',
+        ''
+      ]);
+    });
+    
+    return data;
   };
 
-  const downloadFile = (content, filename, mimeType) => {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const applyExcelStyles = (worksheet) => {
+    // Configurar ancho de columnas
+    const colWidths = [
+      { wch: 10 }, // A
+      { wch: 15 }, // B
+      { wch: 25 }, // C
+      { wch: 15 }, // D
+      { wch: 20 }, // E
+      { wch: 12 }, // F
+      { wch: 12 }, // G
+      { wch: 12 }, // H
+      { wch: 5 }   // I
+    ];
+    
+    worksheet['!cols'] = colWidths;
+    
+    // Configurar rango de impresión
+    const range = XLSX.utils.decode_range(worksheet['!ref']);
+    worksheet['!margins'] = { left: 0.7, right: 0.7, top: 0.75, bottom: 0.75, header: 0.3, footer: 0.3 };
   };
 
   const formatCurrency = (amount) => {
@@ -310,7 +406,7 @@ const OrderReport = ({ orders, onClose }) => {
             onClick={generateExcelReport}
             disabled={loading}
           >
-            <Download size={16} />
+            <FileSpreadsheet size={16} />
             {loading ? 'Generando...' : 'Descargar Excel'}
           </button>
           <button

@@ -24,10 +24,8 @@ export default defineConfig(({ command }) => {
   }
 
   if (command === 'serve') {
-    // Development server
     config.base = '/'
   } else {
-    // Production build (for GitHub Pages)
     config.base = '/KairosMix/'
   }
 

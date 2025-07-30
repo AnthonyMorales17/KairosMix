@@ -5,10 +5,6 @@
 ![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3.7-7952B3?style=for-the-badge&logo=bootstrap)
 ![Vite](https://img.shields.io/badge/Vite-7.0.6-646CFF?style=for-the-badge&logo=vite)
 
-## 🚀 Demo en Vivo
-**[Ver Demo: https://anthony.github.io/KairosMix/](https://anthony.github.io/KairosMix/)**
-
----
 
 KairosMix es una aplicación web moderna y profesional para la gestión integral de un negocio de frutos secos premium. Desarrollada con React y Bootstrap, ofrece una interfaz intuitiva y funcionalidades completas para administrar productos, clientes, pedidos y crear mezclas personalizadas.
 
@@ -49,32 +45,6 @@ KairosMix es una aplicación web moderna y profesional para la gestión integral
 - Node.js (versión 16 o superior)
 - npm o yarn
 - Git
-
-### Instalación Local
-```bash
-# Clonar el repositorio
-git clone https://github.com/anthony/KairosMix.git
-cd KairosMix
-
-# Instalar dependencias
-npm install
-
-# Ejecutar en modo desarrollo
-npm run dev
-
-# Construir para producción
-npm run build
-
-# Desplegar a GitHub Pages
-npm run deploy
-```
-
-### Scripts Disponibles
-- `npm run dev` - Servidor de desarrollo (http://localhost:5173)
-- `npm run build` - Construir para producción
-- `npm run preview` - Previsualizar build de producción
-- `npm run deploy` - Desplegar a GitHub Pages
-- `npm run lint` - Ejecutar linter
 
 ## 📁 Estructura del Proyecto
 
@@ -184,14 +154,6 @@ El proyecto está configurado para despliegue automático en GitHub Pages:
 
 Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
 
-## 📞 Contacto
-
-**Anthony Morales** - Desarrollador Principal  
-📧 Email: [anthony@kairosmix.com](mailto:anthony@kairosmix.com)  
-🌐 Proyecto: [https://github.com/AnthonyMorales17/KairosMix](https://github.com/AnthonyMorales17/KairosMix)  
-🚀 Demo: [https://anthonymorales17.github.io/KairosMix/](https://anthonymorales17.github.io/KairosMix/)
-
----
 
 <div align="center">
 

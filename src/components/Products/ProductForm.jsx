@@ -20,7 +20,11 @@ const ProductForm = ({ product, onSave, onCancel, existingProducts = [] }) => {
 
     useEffect(() => {
         if (product) {
-            setFormData(product);
+            setFormData({
+                ...product,
+                // Si el producto tiene imagen, usarla como preview
+                imagePreview: product.image || ''
+            });
         } else {
             // Auto-generate product code for new products
             const newCode = generateProductCode(formData.name, existingProducts);
@@ -248,8 +252,13 @@ const ProductForm = ({ product, onSave, onCancel, existingProducts = [] }) => {
                 pricePerPound: parseFloat(formData.pricePerPound),
                 wholesalePrice: parseFloat(formData.wholesalePrice),
                 retailPrice: parseFloat(formData.retailPrice),
-                initialStock: parseInt(formData.initialStock)
+                initialStock: parseInt(formData.initialStock),
+                // Usar imagePreview (base64) en lugar del objeto File
+                image: formData.imagePreview || null
             };
+            
+            // Remover la propiedad imagePreview del objeto final
+            delete processedData.imagePreview;
             
             // Success message
             await Swal.fire({
