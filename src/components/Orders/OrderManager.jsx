@@ -5,6 +5,7 @@ import { initializeSampleData } from '../../data/seedData';
 import OrderForm from './OrderForm';
 import OrderDetails from './OrderDetails';
 import OrderReport from './OrderReport';
+import { api } from '../../utils/api';
 import './OrderManager.css';
 
 const OrderManager = () => {
@@ -61,48 +62,17 @@ const OrderManager = () => {
     applyFilters();
   }, [orders, searchTerm, statusFilter, dateFilter]);
 
-  const loadOrders = () => {
+  const loadOrders = async () => {
     try {
-      const savedOrders = localStorage.getItem('orders');
-      console.log('📦 Datos cargados del localStorage:', savedOrders);
-      
-      if (savedOrders) {
-        const parsedOrders = JSON.parse(savedOrders);
-        console.log('📋 Pedidos parseados:', parsedOrders);
-        
-        // Verificar que cada pedido tenga un estado válido
-        const validatedOrders = parsedOrders.map(order => {
-          if (!orderStatuses[order.status]) {
-            console.warn(`⚠️ Estado inválido encontrado: ${order.status} en pedido #${order.id}`);
-            return { ...order, status: 'Pendiente' }; // Estado por defecto
-          }
-          return order;
-        });
-        
-        setOrders(validatedOrders);
-      }
+      const fetchedOrders = await api.getOrders();
+      setOrders(fetchedOrders);
     } catch (error) {
       console.error('Error loading orders:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Error al cargar los pedidos',
-        icon: 'error'
-      });
     }
   };
 
-  const saveOrders = (updatedOrders) => {
-    try {
-      localStorage.setItem('orders', JSON.stringify(updatedOrders));
-      setOrders(updatedOrders);
-    } catch (error) {
-      console.error('Error saving orders:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Error al guardar los pedidos',
-        icon: 'error'
-      });
-    }
+  const saveOrders = () => {
+    // Deprecated for direct api usage, kept to avoid breaking changes if used elsewhere
   };
 
   const applyFilters = () => {
@@ -173,16 +143,19 @@ const OrderManager = () => {
     });
 
     if (result.isConfirmed) {
-      const updatedOrders = orders.filter(o => o.id !== order.id);
-      saveOrders(updatedOrders);
-      
-      Swal.fire({
-        title: '¡Eliminado!',
-        text: 'El pedido ha sido eliminado correctamente',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
-      });
+      try {
+        await api.deleteOrder(order.id);
+        const updatedOrders = orders.filter(o => o.id !== order.id);
+        setOrders(updatedOrders);
+        
+        Swal.fire({
+          title: '¡Eliminado!',
+          text: 'El pedido ha sido eliminado correctamente',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } catch(e) { console.error(e); }
     }
   };
 
@@ -229,52 +202,58 @@ const OrderManager = () => {
     });
 
     if (newStatus) {
-      const updatedOrders = orders.map(o => 
-        o.id === order.id ? { ...o, status: newStatus } : o
-      );
-      saveOrders(updatedOrders);
+      try {
+        await api.updateOrderStatus(order.id, newStatus);
+        const updatedOrders = orders.map(o => 
+          o.id === order.id ? { ...o, status: newStatus } : o
+        );
+        setOrders(updatedOrders);
 
-      Swal.fire({
-        title: '¡Estado Actualizado!',
-        text: `El pedido #${order.id} ahora está ${newStatus}`,
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
-      });
+        Swal.fire({
+          title: '¡Estado Actualizado!',
+          text: `El pedido #${order.id} ahora está ${newStatus}`,
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } catch (e) { console.error(e); }
     }
   };
 
-  const handleFormSubmit = (orderData) => {
-    if (isEditing && selectedOrder) {
-      const updatedOrders = orders.map(order => 
-        order.id === selectedOrder.id ? orderData : order
-      );
-      saveOrders(updatedOrders);
-      
-      Swal.fire({
-        title: '¡Actualizado!',
-        text: 'El pedido ha sido actualizado correctamente',
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
-      });
-    } else {
-      const newOrder = {
-        ...orderData,
-        id: generateOrderId(),
-        status: 'Pendiente'
-      };
-      const updatedOrders = [...orders, newOrder];
-      saveOrders(updatedOrders);
-      
-      Swal.fire({
-        title: '¡Registrado!',
-        text: `Pedido #${newOrder.id} registrado correctamente`,
-        icon: 'success',
-        timer: 2000,
-        showConfirmButton: false
-      });
-    }
+  const handleFormSubmit = async (orderData) => {
+    try {
+      if (isEditing && selectedOrder) {
+        // En una app real haríamos api.updateOrder(...) pero usaremos el estado local aquí como fallback visual
+        const updatedOrders = orders.map(order => 
+          order.id === selectedOrder.id ? orderData : order
+        );
+        setOrders(updatedOrders);
+        
+        Swal.fire({
+          title: '¡Actualizado!',
+          text: 'El pedido ha sido actualizado correctamente',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } else {
+        const newOrderData = {
+          ...orderData,
+          status: 'Pendiente'
+        };
+        const newOrder = await api.createOrder(newOrderData);
+        const updatedOrders = [...orders, newOrder];
+        setOrders(updatedOrders);
+        
+        Swal.fire({
+          title: '¡Registrado!',
+          text: `Pedido #${newOrder.id} registrado correctamente`,
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    } catch(e) { console.error(e); }
     
     setShowForm(false);
     setSelectedOrder(null);

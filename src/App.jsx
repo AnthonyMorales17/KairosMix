@@ -10,8 +10,7 @@ import './App.css';
 
 function App() {
   useEffect(() => {
-    // Inicializar datos de ejemplo al cargar la aplicación
-    initializeSampleData();
+    // Ya no se usan datos locales
   }, []);
 
   // Detectar si estamos en GitHub Pages o desarrollo local

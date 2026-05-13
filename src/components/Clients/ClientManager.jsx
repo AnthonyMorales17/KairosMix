@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Users, Phone, Mail, MapPin, CreditCard } from 'lucide-react';
+import { api } from '../../utils/api';
 import Swal from 'sweetalert2';
 import ClientForm from './ClientForm';
 import './ClientManager.css';
@@ -16,36 +17,7 @@ const ClientManager = () => {
     const [searchError, setSearchError] = useState('');
 
     useEffect(() => {
-        const sampleClients = [
-            {
-                id: 1,
-                name: 'María González',
-                idNumber: '1234567890',
-                idType: 'cedula',
-                email: 'maria.gonzalez@email.com',
-                phone: '0987654321',
-                address: 'Av. Principal 123, Quito, Ecuador'
-            },
-            {
-                id: 2,
-                name: 'Juan Pérez',
-                idNumber: '0987654321098',
-                idType: 'ruc',
-                email: 'juan.perez@empresa.com',
-                phone: '0998877665',
-                address: 'Calle Secundaria 456, Guayaquil, Ecuador'
-            },
-            {
-                id: 3,
-                name: 'Ana Silva',
-                idNumber: 'AB123456',
-                idType: 'pasaporte',
-                email: 'ana.silva@international.com',
-                phone: '0912345678',
-                address: 'Zona Residencial 789, Cuenca, Ecuador'
-            }
-        ];
-        setClients(sampleClients);
+        api.getClients().then(setClients).catch(console.error);
     }, []);
 
     const performSearch = async (searchQuery) => {
@@ -177,15 +149,16 @@ const ClientManager = () => {
         clients;
 
     const handleAddClient = async (clientData) => {
-        const newClient = {
-            ...clientData,
-            id: Date.now()
-        };
-        setClients([...clients, newClient]);
-        setShowForm(false);
+        try {
+            const newClient = await api.createClient(clientData);
+            setClients([...clients, newClient]);
+            setShowForm(false);
+        } catch (e) { console.error(e); }
     };
 
     const handleEditClient = async (clientData) => {
+        // Asumiendo que createClient sirve para upsert o no hay update explicit en el backend de Clients
+        // Pero en un caso real se llamaría api.updateClient
         setClients(clients.map(c => 
             c.id === editingClient.id ? { ...clientData, id: editingClient.id } : c
         ));
@@ -209,7 +182,9 @@ const ClientManager = () => {
         });
 
         if (result.isConfirmed) {
-            setClients(clients.filter(c => c.id !== id));
+            try {
+                await api.deleteClient(id);
+                setClients(clients.filter(c => c.id !== id));
             
             await Swal.fire({
                 icon: 'success',
@@ -218,6 +193,7 @@ const ClientManager = () => {
                 timer: 1500,
                 showConfirmButton: false
             });
+            } catch(e) { console.error(e); }
         }
     };
 

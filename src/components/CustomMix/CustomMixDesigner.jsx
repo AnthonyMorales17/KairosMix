@@ -15,6 +15,7 @@ import Swal from 'sweetalert2';
 import { createSwalDialog } from '../../utils/sweetAlertConfig';
 import NutritionalInfo from './NutritionalInfo';
 import SavedMixSelector from './SavedMixSelector';
+import { api } from '../../utils/api';
 import './CustomMixDesigner.css';
 
 const CustomMixDesigner = ({ products = [], onCreateOrder }) => {
@@ -46,8 +47,7 @@ const CustomMixDesigner = ({ products = [], onCreateOrder }) => {
 
     // Load saved mixes on component mount
     useEffect(() => {
-        const saved = JSON.parse(localStorage.getItem('savedMixes') || '[]');
-        setSavedMixes(saved);
+        api.getCustomMixes().then(setSavedMixes).catch(console.error);
     }, []);
 
     // Sample nutritional data for products
@@ -378,86 +378,101 @@ const CustomMixDesigner = ({ products = [], onCreateOrder }) => {
                     return; // Usuario canceló
                 }
 
-                // Guardar la mezcla primero
                 const newMix = {
-                    id: Date.now(),
                     name: mixName,
-                    components: selectedComponents,
+                    components: selectedComponents.map(c => ({
+                        productCode: c.productCode,
+                        productName: c.productName,
+                        quantity: c.quantity,
+                        price: c.price
+                    })),
                     totalPrice: calculateTotalPrice(),
-                    nutrition: calculateMixNutrition(),
-                    createdAt: new Date().toISOString()
+                    nutrition: calculateMixNutrition()
                 };
 
-                const updatedMixes = [...savedMixes, newMix];
-                setSavedMixes(updatedMixes);
-                localStorage.setItem('savedMixes', JSON.stringify(updatedMixes));
+                try {
+                    const savedMix = await api.createCustomMix(newMix);
+                    const updatedMixes = [...savedMixes, savedMix];
+                    setSavedMixes(updatedMixes);
 
-                if (result.isConfirmed) {
-                    // Guardar y crear pedido
-                    await Swal.fire({
-                        icon: 'success',
-                        title: '¡Mezcla guardada!',
-                        text: `La mezcla "${mixName}" ha sido guardada correctamente`,
-                        confirmButtonText: 'Continuar',
-                        timer: 1500
-                    });
-                    handleCreateOrderForClient();
-                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    // Solo guardar
-                    await Swal.fire({
-                        icon: 'success',
-                        title: '¡Mezcla guardada! 😊',
-                        text: `Tu mezcla "${mixName}" ha sido guardada correctamente. ¡Puedes encontrarla en tus mezclas guardadas!`,
-                        confirmButtonText: 'Crear otra mezcla',
-                        timer: 3000
-                    });
-                }
+                    if (result.isConfirmed) {
+                        // Guardar y crear pedido
+                        await Swal.fire({
+                            icon: 'success',
+                            title: '¡Mezcla guardada!',
+                            text: `La mezcla "${mixName}" ha sido guardada correctamente`,
+                            confirmButtonText: 'Continuar',
+                            timer: 1500
+                        });
+                        handleCreateOrderForClient();
+                    } else if (result.dismiss === Swal.DismissReason.cancel) {
+                        // Solo guardar
+                        await Swal.fire({
+                            icon: 'success',
+                            title: '¡Mezcla guardada! 😊',
+                            text: `Tu mezcla "${mixName}" ha sido guardada correctamente. ¡Puedes encontrarla en tus mezclas guardadas!`,
+                            confirmButtonText: 'Crear otra mezcla',
+                            timer: 3000
+                        });
+                    }
+                } catch(e) { console.error(e); }
                 return;
             }
 
             // Comportamiento normal para administradores
             const newMix = {
-                id: Date.now(),
                 name: mixName,
-                components: selectedComponents,
+                components: selectedComponents.map(c => ({
+                        productCode: c.productCode,
+                        productName: c.productName,
+                        quantity: c.quantity,
+                        price: c.price
+                })),
                 totalPrice: calculateTotalPrice(),
-                nutrition: calculateMixNutrition(),
-                createdAt: new Date().toISOString()
+                nutrition: calculateMixNutrition()
             };
 
-            const updatedMixes = [...savedMixes, newMix];
-            setSavedMixes(updatedMixes);
-            localStorage.setItem('savedMixes', JSON.stringify(updatedMixes));
+            try {
+                const savedMix = await api.createCustomMix(newMix);
+                const updatedMixes = [...savedMixes, savedMix];
+                setSavedMixes(updatedMixes);
 
-            await Swal.fire({
-                icon: 'success',
-                title: '¡Mezcla guardada!',
-                text: `La mezcla "${mixName}" ha sido guardada correctamente`,
-                confirmButtonText: 'Continuar'
-            });
+                await Swal.fire({
+                    icon: 'success',
+                    title: '¡Mezcla guardada!',
+                    text: `La mezcla "${mixName}" ha sido guardada correctamente`,
+                    confirmButtonText: 'Continuar'
+                });
 
-            // Solo preguntar sobre crear pedido si NO está en modo cliente
-            const result = await Swal.fire({
-                title: '¿Crear pedido?',
-                text: '¿Deseas crear un pedido con esta mezcla?',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, crear pedido',
-                cancelButtonText: 'No, gracias'
-            });
+                // Solo preguntar sobre crear pedido si NO está en modo cliente
+                const result = await Swal.fire({
+                    title: '¿Crear pedido?',
+                    text: '¿Deseas crear un pedido con esta mezcla?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#28a745',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Sí, crear pedido',
+                    cancelButtonText: 'No, gracias'
+                });
 
-            if (result.isConfirmed) {
-                handleCreateOrder();
+                if (result.isConfirmed) {
+                    handleCreateOrder();
+                }
+            } catch (error) {
+                await Swal.fire({
+                    icon: 'error',
+                    title: 'Error del sistema',
+                    text: 'No se pudo guardar la mezcla. Por favor, inténtalo de nuevo.',
+                    confirmButtonText: 'Reintentar'
+                });
             }
-
         } catch (error) {
             await Swal.fire({
                 icon: 'error',
-                title: 'Error del sistema',
-                text: 'No se pudo guardar la mezcla. Por favor, inténtalo de nuevo.',
-                confirmButtonText: 'Reintentar'
+                title: 'Error',
+                text: 'Ocurrió un error al procesar tu solicitud',
+                confirmButtonText: 'Aceptar'
             });
         }
     };
@@ -547,9 +562,9 @@ const CustomMixDesigner = ({ products = [], onCreateOrder }) => {
             });
 
             if (formData) {
-                // Verificar si el cliente existe
-                const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-                const client = clients.find(c => c.id === formData.clientId);
+                // Verificar si el cliente existe mediante API
+                const clients = await api.getClients();
+                const client = clients.find(c => c.documentId === formData.clientId); // Assuming clientId is Document ID for users
                 
                 if (!client) {
                     await Swal.fire({
@@ -571,30 +586,19 @@ const CustomMixDesigner = ({ products = [], onCreateOrder }) => {
 
                 // Crear pedido con estado especial para clientes
                 const newOrder = {
-                    id: Date.now(),
-                    clientId: formData.clientId,
-                    clientName: client.name,
-                    type: 'custom_mix_client',
-                    mixData: mixData,
-                    products: mixData.components.map(component => ({
-                        code: component.productCode,
-                        name: component.productName,
+                    client: { id: client.id }, // Relationship mapping for backend
+                    totalPrice: mixData.totalPrice,
+                    status: 'CLIENT_PENDING', // Estado especial para pedidos de clientes
+                    notes: formData.observations,
+                    items: mixData.components.map(component => ({
+                        product: products.find(p => p.code === component.productCode),
                         quantity: component.quantity,
-                        unitPrice: component.price / component.quantity,
-                        totalPrice: component.price
-                    })),
-                    totalAmount: mixData.totalPrice,
-                    status: 'client_pending', // Estado especial para pedidos de clientes
-                    observations: formData.observations,
-                    clientRequest: true, // Marca que es un pedido de cliente
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
+                        unitPrice: component.price / component.quantity
+                    }))
                 };
 
                 // Guardar pedido
-                const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-                orders.push(newOrder);
-                localStorage.setItem('orders', JSON.stringify(orders));
+                const createdOrder = await api.createOrder(newOrder);
 
                 await Swal.fire({
                     icon: 'success',

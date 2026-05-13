@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Package } from 'lucide-react';
+import { api } from '../../utils/api';
 import Swal from 'sweetalert2';
 import ProductForm from './ProductForm';
 import './ProductManager.css';
@@ -11,79 +12,9 @@ const [editingProduct, setEditingProduct] = useState(null);
 const [searchTerm, setSearchTerm] = useState('');
 
   // Datos de ejemplo para productos de frutos secos
-useEffect(() => {
-    // Cargar productos desde localStorage o usar datos de ejemplo
-    const savedProducts = localStorage.getItem('products');
-    if (savedProducts) {
-        setProducts(JSON.parse(savedProducts));
-    } else {
-        const sampleProducts = [
-        {
-            id: 1,
-            code: 'A01',
-            name: 'Almendras Premium',
-            countryOfOrigin: 'Estados Unidos',
-            pricePerPound: 15.99,
-            wholesalePrice: 14.50,
-            retailPrice: 17.99,
-            initialStock: 50,
-            stock: 50,
-            image: null
-        },
-        {
-            id: 2,
-            code: 'N01',
-            name: 'Nueces de Castilla',
-            countryOfOrigin: 'Chile',
-            pricePerPound: 22.50,
-            wholesalePrice: 20.00,
-            retailPrice: 25.99,
-            initialStock: 30,
-            stock: 30,
-            image: null
-        },
-        {
-            id: 3,
-            code: 'P01',
-            name: 'Pasas Sultan',
-            countryOfOrigin: 'Turquía',
-            pricePerPound: 8.75,
-            wholesalePrice: 7.50,
-            retailPrice: 10.99,
-            initialStock: 75,
-            stock: 75,
-            image: null
-        },
-        {
-            id: 4,
-            code: 'A02',
-            name: 'Avellanas',
-            countryOfOrigin: 'Italia',
-            pricePerPound: 18.25,
-            wholesalePrice: 16.50,
-            retailPrice: 20.99,
-            initialStock: 40,
-            stock: 40,
-            image: null
-        },
-        {
-            id: 5,
-            code: 'P02',
-            name: 'Pistachos Tostados',
-            countryOfOrigin: 'Estados Unidos',
-            pricePerPound: 28.75,
-            wholesalePrice: 26.00,
-            retailPrice: 32.99,
-            initialStock: 25,
-            stock: 25,
-            image: null
-        }
-        ];
-        
-        setProducts(sampleProducts);
-        localStorage.setItem('products', JSON.stringify(sampleProducts));
-    }
-}, []);
+  useEffect(() => {
+    api.getProducts().then(setProducts).catch(console.error);
+  }, []);
 
     // New advanced search system
     const [searchResults, setSearchResults] = useState([]);
@@ -226,25 +157,20 @@ useEffect(() => {
         products;
 
     const handleAddProduct = async (productData) => {
-        const newProduct = {
-        ...productData,
-        id: Date.now(),
-        stock: productData.initialStock // Agregar stock inicial
-        };
-        const updatedProducts = [...products, newProduct];
-        setProducts(updatedProducts);
-        localStorage.setItem('products', JSON.stringify(updatedProducts));
-        setShowForm(false);
+        try {
+            const newProduct = await api.createProduct({ ...productData, stock: productData.initialStock });
+            setProducts([...products, newProduct]);
+            setShowForm(false);
+        } catch (e) { console.error(e); }
     };    
 
     const handleEditProduct = async (productData) => {
-        const updatedProducts = products.map(p => 
-        p.id === editingProduct.id ? { ...productData, id: editingProduct.id, stock: productData.initialStock } : p
-        );
-        setProducts(updatedProducts);
-        localStorage.setItem('products', JSON.stringify(updatedProducts));
-        setEditingProduct(null);
-        setShowForm(false);
+        try {
+            const updated = await api.updateProduct(editingProduct.id, { ...productData, stock: productData.initialStock });
+            setProducts(products.map(p => p.id === editingProduct.id ? updated : p));
+            setEditingProduct(null);
+            setShowForm(false);
+        } catch(e) { console.error(e); }
     };
 
     const handleDeleteProduct = async (id) => {
@@ -263,9 +189,10 @@ useEffect(() => {
         });
 
         if (result.isConfirmed) {
-            const updatedProducts = products.filter(p => p.id !== id);
-            setProducts(updatedProducts);
-            localStorage.setItem('products', JSON.stringify(updatedProducts));
+            try {
+                await api.deleteProduct(id);
+                const updatedProducts = products.filter(p => p.id !== id);
+                setProducts(updatedProducts);
             
             await Swal.fire({
                 icon: 'success',
@@ -274,6 +201,7 @@ useEffect(() => {
                 timer: 1500,
                 showConfirmButton: false
             });
+            } catch(e) { console.error(e); }
         }
     };
 
